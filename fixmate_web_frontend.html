@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FixMate: AI Repair Assistant</title>
+
+  <!-- Google Fonts: Space Grotesk (Headings), Inter (UI), JetBrains Mono (Telemetry/Badges) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Space Grotesk', 'Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Prevent theme flash on initial load -->
+  <script>
+    (function () {
+      const saved = localStorage.getItem('fixmate-hud-theme') || 'theme-04';
+      document.documentElement.setAttribute('data-hud-theme', saved);
+      if (saved === 'theme-01') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+
+  <style>
+    /* Theme 04 (Cyber-Amber & Electric Cyan HUD) & Multi-Theme CSS Variables */
+    :root,
+    [data-hud-theme="theme-04"] {
+      --hud-accent: #f59e0b;
+      --hud-accent-secondary: #22d3ee;
+      --hud-glow: rgba(245, 158, 11, 0.24);
+      --hud-border-glow: rgba(34, 211, 238, 0.35);
+      --hud-bg-deep: #060913;
+    }
+    [data-hud-theme="theme-03"] {
+      --hud-accent: #10b981;
+      --hud-accent-secondary: #34d399;
+      --hud-glow: rgba(16, 185, 129, 0.24);
+      --hud-border-glow: rgba(52, 211, 153, 0.35);
+      --hud-bg-deep: #040d0a;
+    }
+    [data-hud-theme="theme-02"] {
+      --hud-accent: #3b82f6;
+      --hud-accent-secondary: #38bdf8;
+      --hud-glow: rgba(59, 130, 246, 0.24);
+      --hud-border-glow: rgba(56, 189, 248, 0.35);
+      --hud-bg-deep: #080d1a;
+    }
+    [data-hud-theme="theme-01"] {
+      --hud-accent: #2563eb;
+      --hud-accent-secondary: #0284c7;
+      --hud-glow: rgba(37, 99, 235, 0.14);
+      --hud-border-glow: rgba(37, 99, 235, 0.25);
+      --hud-bg-deep: #f8fafc;
+    }
+
+    /* Animated Blueprint / Precision Workbench Dot-Matrix Background */
+    @keyframes gridDrift {
+      0% { background-position: 0px 0px; }
+      100% { background-position: 44px 44px; }
+    }
+    .workbench-bg {
+      background-image:
+        radial-gradient(rgba(100, 116, 139, 0.22) 1.25px, transparent 1.25px),
+        linear-gradient(to right, rgba(100, 116, 139, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(100, 116, 139, 0.05) 1px, transparent 1px);
+      background-size: 22px 22px, 44px 44px, 44px 44px;
+      animation: gridDrift 28s linear infinite;
+    }
+    .dark .workbench-bg {
+      background-color: var(--hud-bg-deep);
+      background-image:
+        radial-gradient(rgba(148, 163, 184, 0.14) 1.25px, transparent 1.25px),
+        linear-gradient(to right, rgba(34, 211, 238, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
+      background-size: 22px 22px, 44px 44px, 44px 44px;
+    }
+
+    /* Ambient Floating Neon Orbs */
+    @keyframes floatOrb {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(24px, -18px, 0) scale(1.07); }
+    }
+    .animate-orb-slow {
+      animation: floatOrb 11s ease-in-out infinite;
+    }
+    .animate-orb-reverse {
+      animation: floatOrb 14s ease-in-out infinite reverse;
+    }
+
+    /* Live Oscilloscope Pulse Wave */
+    @keyframes waveDash {
+      0% { stroke-dashoffset: 64; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .oscilloscope-path {
+      stroke-dasharray: 32 32;
+      animation: waveDash 1.8s linear infinite;
+    }
+
+    /* 3D Interactive Device Card Spotlight & Tilt */
+    .device-card-btn {
+      position: relative;
+      transform-style: preserve-3d;
+      will-change: transform;
+      overflow: hidden;
+    }
+    .device-card-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        140px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        var(--hud-glow),
+        transparent 75%
+      );
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .device-card-btn:hover::before {
+      opacity: 1;
+    }
+
+    /* Radar Sweep Ring for Telemetry Loader */
+    @keyframes radarSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .animate-radar {
+      animation: radarSpin 2.2s linear infinite;
+    }
+
+    /* Voice Dictation Equalizer Bars */
+    @keyframes eqBounce {
+      0%, 100% { transform: scaleY(0.35); }
+      50% { transform: scaleY(1); }
+    }
+    .eq-bar {
+      transform-origin: bottom;
+      animation: eqBounce 0.65s ease-in-out infinite;
+    }
+    .eq-bar:nth-child(2) { animation-delay: 0.15s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.3s; }
+
+    /* Hazard Stripe Accent for Safety Disclaimer */
+    .hazard-stripe {
+      background: repeating-linear-gradient(
+        -45deg,
+        #f59e0b,
+        #f59e0b 8px,
+        #1e293b 8px,
+        #1e293b 16px
+      );
+    }
+
+    /* Staggered Card Entrance Animation */
+    @keyframes slideReveal {
+      0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.99);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .animate-reveal {
+      opacity: 0;
+      animation: slideReveal 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .delay-1 { animation-delay: 0.06s; }
+    .delay-2 { animation-delay: 0.14s; }
+    .delay-3 { animation-delay: 0.22s; }
+    .delay-4 { animation-delay: 0.30s; }
+
+    /* Diagnostic Laser Scan Line for Uploaded Image */
+    @keyframes scanLaser {
+      0% {
+        top: 0%;
+        opacity: 0.95;
+      }
+      50% {
+        top: 94%;
+        opacity: 1;
+      }
+      100% {
+        top: 0%;
+        opacity: 0.95;
+      }
+    }
+    .scan-beam {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, #38bdf8, transparent);
+      box-shadow: 0 0 14px 3px rgba(56, 189, 248, 0.75);
+      animation: scanLaser 2.1s ease-in-out infinite;
+    }
+
+    /* Shimmer Effect on Primary Diagnose Button */
+    @keyframes shimmerSweep {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .btn-shimmer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.22),
+        transparent
+      );
+      transform: translateX(-100%);
+    }
+    .btn-shimmer:hover:not(:disabled)::after {
+      animation: shimmerSweep 0.9s ease-in-out;
+    }
+
+    /* Telemetry Progress Bar Animation */
+    @keyframes progressFlow {
+      0% { width: 12%; }
+      50% { width: 76%; }
+      85% { width: 92%; }
+      100% { width: 96%; }
+    }
+    .animate-telemetry-bar {
+      animation: progressFlow 5.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* Subtle Breathing Glow for Verdict Card */
+    @keyframes verdictPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.015); }
+    }
+    .badge-breathe {
+      animation: verdictPulse 3s ease-in-out infinite;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.35);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.55);
+    }
+
+    /* Print-Friendly Repair Checklist Mode */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        animation: none !important;
+      }
+      aside, #diagnoseForm, #followupForm, #themeSwitcherGroup, #copyReportBtn, #printReportBtn, .no-print {
+        display: none !important;
+      }
+      #resultsSection {
+        display: block !important;
+      }
+    }
+  </style>
+</head>
+<body class="workbench-bg bg-slate-50 text-slate-900 dark:bg-[#060913] dark:text-slate-100 min-h-screen antialiased selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">
+
+  <!-- Ambient Top Gradient & Floating HUD Orbs -->
+  <div class="pointer-events-none fixed inset-0 overflow-hidden z-0">
+    <div class="absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-amber-500/10 via-cyan-500/5 to-transparent dark:from-amber-500/10 dark:via-cyan-500/5 dark:to-transparent"></div>
+    <div class="animate-orb-slow absolute -top-24 -left-24 h-72 w-72 rounded-full bg-amber-500/10 dark:bg-amber-500/10 blur-3xl"></div>
+    <div class="animate-orb-reverse absolute top-1/3 -right-24 h-80 w-80 rounded-full bg-cyan-500/10 dark:bg-cyan-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Toast Notification (for Copy / Reset feedback) -->
+  <div
+    id="toastBanner"
+    class="fixed bottom-5 right-5 z-50 hidden items-center gap-2.5 rounded-xl border border-amber-500/40 bg-slate-900/95 text-white px-4 py-3 text-xs sm:text-sm font-medium shadow-2xl backdrop-blur-md"
+  >
+    <span class="h-2 w-2 rounded-full bg-amber-400 animate-ping"></span>
+    <span id="toastText"></span>
+  </div>
+
+  <!-- Main Application Shell -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- =====================================================================
+         TOP WORKBENCH HEADER BAR
+    ====================================================================== -->
+    <header class="mb-6 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl px-5 py-4 sm:px-7 sm:py-5 shadow-lg shadow-slate-900/5 dark:shadow-black/30">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-cyan-500 text-slate-950 shadow-lg shadow-amber-500/25">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="font-display text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                FixMate: AI Repair Assistant
+              </h1>
+              <span class="font-mono text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                HUD v4.0
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              Precision beginner diagnostics, visual fault scanning &amp; safety-first repair verdicts.
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Controls: Live Oscilloscope Telemetry + 4-Theme HUD Switcher -->
+        <div class="flex flex-wrap items-center gap-2.5 self-start sm:self-center">
+          <div class="hidden xl:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-mono text-xs">
+            <svg class="w-7 h-3.5 text-amber-500 dark:text-cyan-400" viewBox="0 0 36 14" fill="none">
+              <polyline
+                class="oscilloscope-path"
+                points="0,7 8,7 11,2 15,12 19,4 22,9 25,7 36,7"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span>HUD TELEMETRY</span>
+          </div>
+
+          <div
+            id="themeSwitcherGroup"
+            role="group"
+            aria-label="Workbench Theme Selector"
+            class="flex items-center gap-1 p-1 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100/90 dark:bg-slate-800/90 shadow-inner"
+          >
+            <button
+              type="button"
+              data-theme-id="theme-01"
+              title="Theme 01: Light Lab"
+              class="theme-pill-btn px-2.5 py-1.5 rounded-lg font-mono text-[11px] font-bold transition cursor-pointer"
+            >
+              01 LAB
+            </button>
+            <button
+              type="button"
+              data-theme-id="theme-02"
+              title="Theme 02: Midnight Bench"
+              class="theme-pill-btn px-2.5 py-1.5 rounded-lg font-mono text-[11px] font-bold transition cursor-pointer"
+            >
+              02 BLUE
+            </button>
+            <button
+              type="button"
+              data-theme-id="theme-03"
+              title="Theme 03: Emerald Matrix"
+              class="theme-pill-btn px-2.5 py-1.5 rounded-lg font-mono text-[11px] font-bold transition cursor-pointer"
+            >
+              03 PCB
+            </button>
+            <button
+              type="button"
+              data-theme-id="theme-04"
+              title="Theme 04: Cyber-Amber Diagnostic HUD"
+              class="theme-pill-btn px-2.5 py-1.5 rounded-lg font-mono text-[11px] font-bold transition cursor-pointer"
+            >
+              04 HUD
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- =====================================================================
+         MAIN TWO-COLUMN WORKBENCH GRID
+    ====================================================================== -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- ===================================================================
+           LEFT SIDEBAR: Safety Protocol & Workbench Controls
+      ==================================================================== -->
+      <aside class="lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-6">
+
+        <!-- Mandatory Safety Disclaimer Panel -->
+        <div class="overflow-hidden rounded-2xl border border-amber-400/50 dark:border-amber-500/30 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl shadow-md">
+          <div class="hazard-stripe h-2 w-full"></div>
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-display font-bold text-base">
+                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <h2>Safety Protocol</h2>
+              </div>
+              <span class="font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                Mandatory
+              </span>
+            </div>
+
+            <ul class="space-y-2.5 text-xs sm:text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed">
+              <li class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                <span><strong class="text-slate-900 dark:text-white">Unplug First:</strong> Disconnect wall power and remove batteries (if safe) before every check.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 rounded-full bg-red-500 shrink-0"></span>
+                <span><strong class="text-red-600 dark:text-red-400">Never Open:</strong> Sealed power supplies/adapters, microwaves, or swollen/leaking batteries.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                <span><strong class="text-slate-900 dark:text-white">Stop Immediately:</strong> If you smell burning, see smoke/sparks, or find exposed wiring, call a technician.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0"></span>
+                <span class="text-slate-500 dark:text-slate-400">Educational beginner guidance only; not a substitute for certified repair.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Visual Inspection Tips -->
+        <div class="rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white/85 dark:bg-slate-900/75 backdrop-blur-xl p-5 shadow-sm">
+          <h3 class="font-display text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2.5">
+            <svg class="w-4 h-4 text-blue-600 dark:text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            Optical Inspection Tips
+          </h3>
+          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+            <li class="flex items-center gap-2">
+              <span class="font-mono text-[11px] text-blue-600 dark:text-cyan-400 font-bold">01</span>
+              <span>Use bright, indirect light to avoid glare.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="font-mono text-[11px] text-blue-600 dark:text-cyan-400 font-bold">02</span>
+              <span>Focus on frayed cords, bent pins, or LEDs.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="font-mono text-[11px] text-blue-600 dark:text-cyan-400 font-bold">03</span>
+              <span>Capture voltage/model labels when possible.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Reset Session Control -->
+        <button
+          id="resetBtn"
+          type="button"
+          class="group w-full py-3 px-4 rounded-2xl border border-slate-300/90 dark:border-slate-700/90 bg-white/90 dark:bg-slate-900/85 hover:border-blue-500 dark:hover:border-cyan-500 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+        >
+          <svg class="w-4 h-4 text-slate-500 group-hover:text-blue-600 dark:group-hover:text-cyan-400 group-hover:-rotate-180 transition-transform duration-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+          <span>Start New Diagnosis</span>
+        </button>
+      </aside>
+
+      <!-- ===================================================================
+           RIGHT MAIN WORKSPACE: Input Deck, Telemetry Loader & Diagnostic Feed
+      ==================================================================== -->
+      <main class="lg:col-span-8 xl:col-span-9 space-y-6">
+
+        <!-- STEP 1: HARDWARE INTAKE DECK -->
+        <section class="rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl p-5 sm:p-7 shadow-lg shadow-slate-900/5 dark:shadow-black/30">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <div class="flex items-center gap-2.5">
+              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 dark:bg-cyan-500 text-white dark:text-slate-950 font-mono text-xs font-bold">
+                01
+              </span>
+              <h2 class="font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                Hardware Intake & Symptom Log
+              </h2>
+            </div>
+            <span class="font-mono text-xs text-slate-500 dark:text-slate-400">
+              Select device & describe fault
+            </span>
+          </div>
+
+          <!-- Inline Validation / Error Banner -->
+          <div
+            id="formAlert"
+            class="hidden mb-5 rounded-xl border border-red-400/50 bg-red-500/10 p-3.5 text-xs sm:text-sm text-red-700 dark:text-red-300 flex items-start justify-between gap-3"
+            role="alert"
+          >
+            <div class="flex items-start gap-2.5">
+              <span class="mt-0.5 font-bold">⚠️</span>
+              <span id="formAlertText"></span>
+            </div>
+            <button type="button" id="closeFormAlert" class="text-red-500 hover:text-red-700 dark:hover:text-red-200 font-bold text-xs p-1">✕</button>
+          </div>
+
+          <form id="diagnoseForm" class="space-y-6">
+            <!-- Interactive Visual Device Selector Grid -->
+            <div>
+              <label class="block text-xs font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
+                Select Target Device
+              </label>
+              <div id="deviceGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
+                <!-- Device buttons injected cleanly by JS for crisp SVG icon control -->
+              </div>
+            </div>
+
+            <!-- Custom Device Input (Smoothly revealed when "Other" is active) -->
+            <div id="customDeviceWrapper" class="hidden animate-reveal">
+              <label for="customDeviceInput" class="block text-xs font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
+                Specify Custom Device <span class="normal-case font-sans font-normal opacity-75">(optional)</span>
+              </label>
+              <input
+                id="customDeviceInput"
+                type="text"
+                placeholder="e.g., Hair dryer, Table lamp, Bluetooth speaker, Electric kettle"
+                class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-cyan-400/20 outline-none transition"
+              />
+            </div>
+
+            <!-- Two-Column Symptom Input & Optical Dropzone -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+              <!-- Symptom Textarea & Quick-Select Symptom Chips -->
+              <div class="md:col-span-7 flex flex-col justify-between space-y-3">
+                <div>
+                  <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <label for="problemInput" class="block text-xs font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400">
+                      Fault Description
+                    </label>
+                    <div class="flex items-center gap-2.5">
+                      <button
+                        id="voiceDictateBtn"
+                        type="button"
+                        title="Dictate fault description using your microphone"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/80 hover:border-amber-500 dark:hover:border-amber-400 text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer"
+                      >
+                        <span id="voiceIdleIcon">🎙️</span>
+                        <span id="voiceWaveBars" class="hidden items-end gap-0.5 h-3">
+                          <span class="eq-bar w-0.5 h-3 bg-red-500 rounded-full"></span>
+                          <span class="eq-bar w-0.5 h-3 bg-amber-400 rounded-full"></span>
+                          <span class="eq-bar w-0.5 h-3 bg-cyan-400 rounded-full"></span>
+                        </span>
+                        <span id="voiceBtnLabel">Dictate</span>
+                      </button>
+                      <span id="charCount" class="font-mono text-[11px] text-slate-400">0 chars</span>
+                    </div>
+                  </div>
+                  <textarea
+                    id="problemInput"
+                    rows="4"
+                    placeholder="Describe what happens when you turn it on, unusual noises, heat, or when the issue began..."
+                    class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-blue-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-cyan-400/20 outline-none transition resize-y leading-relaxed"
+                  ></textarea>
+                </div>
+
+                <!-- One-Click Common Symptom Presets -->
+                <div>
+                  <span class="block font-mono text-[10px] uppercase tracking-wider text-slate-400 mb-1.5">
+                    Quick Symptom Presets (Click to Fill)
+                  </span>
+                  <div id="symptomChips" class="flex flex-wrap gap-1.5"></div>
+                </div>
+              </div>
+
+              <!-- Optical Photo Upload Dropzone with Laser Scan Overlay -->
+              <div class="md:col-span-5 flex flex-col">
+                <label class="block text-xs font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
+                  Optical Scan Photo <span class="normal-case font-sans font-normal opacity-75">(optional)</span>
+                </label>
+
+                <label
+                  id="dropZone"
+                  for="imageInput"
+                  class="relative flex-1 min-h-[168px] flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-cyan-400 bg-slate-50/70 dark:bg-slate-800/40 p-4 text-center cursor-pointer transition overflow-hidden group"
+                >
+                  <!-- Viewfinder Corner Brackets -->
+                  <span class="pointer-events-none absolute top-2 left-2 h-3 w-3 border-t-2 border-l-2 border-amber-500/60 dark:border-cyan-400/60"></span>
+                  <span class="pointer-events-none absolute top-2 right-2 h-3 w-3 border-t-2 border-r-2 border-amber-500/60 dark:border-cyan-400/60"></span>
+                  <span class="pointer-events-none absolute bottom-2 left-2 h-3 w-3 border-b-2 border-l-2 border-amber-500/60 dark:border-cyan-400/60"></span>
+                  <span class="pointer-events-none absolute bottom-2 right-2 h-3 w-3 border-b-2 border-r-2 border-amber-500/60 dark:border-cyan-400/60"></span>
+
+                  <input
+                    id="imageInput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    class="sr-only"
+                  />
+
+                  <!-- Empty Dropzone State -->
+                  <div id="uploadPlaceholder" class="space-y-2 py-2">
+                    <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-cyan-500/15 text-amber-600 dark:text-cyan-400 group-hover:scale-110 transition-transform">
+                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    </div>
+                    <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      Drop device photo or <span class="text-amber-600 dark:text-cyan-400 underline">browse</span>
+                    </p>
+                    <p class="font-mono text-[10px] text-slate-400">
+                      PNG, JPG, WEBP • Auto-compressed
+                    </p>
+                  </div>
+
+                  <!-- Uploaded Photo Preview + Laser Scanner Overlay -->
+                  <div id="imagePreviewContainer" class="hidden relative w-full">
+                    <div class="relative mx-auto max-h-36 overflow-hidden rounded-lg border border-slate-300 dark:border-slate-700 bg-black/20">
+                      <img id="imagePreview" src="" alt="Device preview" class="mx-auto max-h-36 w-auto object-contain" />
+                      <div id="imageScanOverlay" class="hidden absolute inset-0 bg-cyan-500/10 pointer-events-none">
+                        <div class="scan-beam"></div>
+                      </div>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between gap-2 px-1">
+                      <span id="imageFileName" class="truncate font-mono text-[11px] text-slate-600 dark:text-slate-300"></span>
+                      <button
+                        id="removeImageBtn"
+                        type="button"
+                        class="shrink-0 font-mono text-[11px] font-bold text-red-500 hover:text-red-400 px-2 py-0.5 rounded bg-red-500/10 cursor-pointer"
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Interactive Pre-Scan Safety Confirmation Switch -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 px-4 py-3">
+              <label for="safetyAckCheckbox" class="flex items-center gap-3 cursor-pointer select-none">
+                <input
+                  id="safetyAckCheckbox"
+                  type="checkbox"
+                  checked
+                  class="h-4 w-4 rounded border-amber-500/50 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                />
+                <span class="text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+                  <strong class="text-amber-700 dark:text-amber-300">Safety Ready:</strong> I will unplug the device &amp; never open power supplies or swollen batteries.
+                </span>
+              </label>
+              <span id="safetyReadyBadge" class="self-start sm:self-center font-mono text-[10px] font-bold uppercase px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                ✓ PROTOCOL LOCKED
+              </span>
+            </div>
+
+            <!-- Primary Submit CTA -->
+            <button
+              id="diagnoseBtn"
+              type="submit"
+              class="btn-shimmer relative overflow-hidden w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-cyan-500 hover:from-amber-400 hover:via-orange-400 hover:to-cyan-400 disabled:opacity-65 text-slate-950 font-display font-bold text-sm sm:text-base tracking-wide shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <span id="diagnoseBtnIcon">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </span>
+              <span id="diagnoseBtnText">Run Safety Diagnosis</span>
+            </button>
+          </form>
+        </section>
+
+        <!-- =================================================================
+             ANIMATED TELEMETRY SCANNER (Visible during Gemini API call)
+        ================================================================== -->
+        <section
+          id="telemetryLoader"
+          class="hidden rounded-2xl border border-amber-500/45 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-6 shadow-2xl animate-reveal"
+        >
+          <div class="flex items-center justify-between gap-3 mb-3.5">
+            <div class="flex items-center gap-3.5">
+              <!-- Animated SVG Radar Sweep Disc -->
+              <div class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-cyan-500/15 border border-amber-500/30 text-amber-600 dark:text-cyan-400 overflow-hidden">
+                <svg class="w-8 h-8 animate-radar" viewBox="0 0 32 32" fill="none">
+                  <circle cx="16" cy="16" r="13" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.5" />
+                  <circle cx="16" cy="16" r="7" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2" stroke-dasharray="3 3" />
+                  <path d="M16 16 L16 3 A13 13 0 0 1 28 11 Z" fill="currentColor" fill-opacity="0.45" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  FixMate Diagnostic HUD Active
+                </h3>
+                <p id="telemetryStatusText" class="font-mono text-xs text-amber-700 dark:text-cyan-400">
+                  Initializing safety boundary checks...
+                </p>
+              </div>
+            </div>
+            <span class="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 animate-pulse">
+              SCANNING
+            </span>
+          </div>
+
+          <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800 p-0.5">
+            <div id="telemetryBar" class="h-full rounded-full bg-gradient-to-r from-amber-500 via-cyan-400 to-emerald-400 animate-telemetry-bar"></div>
+          </div>
+        </section>
+
+        <!-- =================================================================
+             STEP 2: DIAGNOSTIC REPORT & INTERACTIVE FOLLOW-UP CHAT
+        ================================================================== -->
+        <section id="resultsSection" class="hidden space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white font-mono text-xs font-bold">
+                02
+              </span>
+              <h2 class="font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                Diagnostic Report & Follow-Up Bench
+              </h2>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="activeDevicePill" class="font-mono text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300/60 dark:border-slate-700"></span>
+              <button
+                id="copyReportBtn"
+                type="button"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-amber-500 dark:hover:border-cyan-400 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                <span>Copy Report</span>
+              </button>
+              <button
+                id="printReportBtn"
+                type="button"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-amber-500 dark:hover:border-cyan-400 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                <span>Print Checklist</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Conversation History Container -->
+          <div id="chatMessages" class="space-y-6"></div>
+
+          <!-- Follow-Up Chat Input Bar -->
+          <div class="rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl p-4 sm:p-5 shadow-lg">
+            <div
+              id="followupAlert"
+              class="hidden mb-3 rounded-xl border border-red-400/50 bg-red-500/10 p-3 text-xs sm:text-sm text-red-700 dark:text-red-300"
+            ></div>
+
+            <form id="followupForm" class="flex flex-col sm:flex-row gap-3">
+              <input
+                id="followupInput"
+                type="text"
+                placeholder="Reply to FixMate's questions or share what happened after your check..."
+                class="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-blue-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-cyan-400/20 outline-none transition"
+              />
+              <button
+                id="followupBtn"
+                type="submit"
+                class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-display font-bold text-sm transition flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
+              >
+                <span id="followupBtnText">Send Reply</span>
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </form>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       APPLICATION JAVASCRIPT
+  ====================================================================== -->
+  <script>
+    (function () {
+      // ---------------------------------------------------------------------
+      // Device Catalog with Custom Crisp SVGs & Tailored Symptom Presets
+      // ---------------------------------------------------------------------
+      const DEVICE_CATALOG = [
+        {
+          id: 'Phone charger',
+          label: 'Charger',
+          svg: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 2v4"/><path d="M15 2v4"/><path d="M7 6h10v5a5 5 0 0 1-10 0V6z"/><path d="M12 16v6"/></svg>`,
+          presets: [
+            'Only charges when cable is bent at an angle',
+            'Adapter brick gets unusually hot',
+            'Completely dead, no charging icon on phone',
+          ],
+        },
+        {
+          id: 'Fan',
+          label: 'Fan',
+          svg: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="2"/><path d="M12 10c0-3.5 2.5-6 5-5s2 4-1 6"/><path d="M14 12c3.5 0 6 2.5 5 5s-4 2-6-1"/><path d="M12 14c0 3.5-2.5 6-5 5s-2-4 1-6"/><path d="M10 12c-3.5 0-6-2.5-5-5s4-2 6 1"/></svg>`,
+          presets: [
+            'Motor hums when turned on but blades do not spin',
+            'Blades spin very slowly even on highest speed',
+            'Makes a loud rattling or clicking noise',
+          ],
+        },
+        {
+          id: 'Laptop',
+          label: 'Laptop',
+          svg: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>`,
+          presets: [
+            'Power light blinks but screen stays completely black',
+            'Fan runs very loud and laptop overheats quickly',
+            'Plugged in but battery percentage is not increasing',
+          ],
+        },
+        {
+          id: 'Mixer',
+          label: 'Mixer',
+          svg: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 3h12l-1.5 9h-9L6 3z"/><path d="M5 12h14v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-6z"/><circle cx="12" cy="16.5" r="1.5"/></svg>`,
+          presets: [
+            'Will not turn on at all when plugged in',
+            'Motor spins but blades inside jar do not turn',
+            'Stopped suddenly while blending heavy ingredients',
+          ],
+        },
+        {
+          id: 'TV remote',
+          label: 'TV Remote',
+          svg: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="7" y="2" width="10" height="20" rx="2.5"/><circle cx="12" cy="7" r="1.2"/><circle cx="10" cy="12" r="0.8" fill="currentColor"/><circle cx="14" cy="12" r="0.8" fill="currentColor"/><circle cx="10" cy="16" r="0.8" fill="currentColor"/><circle cx="14" cy="16" r="0.8" fill="currentColor"/></svg>`,
+          presets: [
+            'Only power and volume buttons work, others unresponsive',
+            'Not working even after putting in fresh batteries',
+            'Only works when standing very close to the TV',
+          ],
+        },
+        {
+          id: 'Other',
+          label: 'Other',
+          svg: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>`,
+          presets: [
+            'Device suddenly lost power and will not switch back on',
+            'Intermittent power when moving the power cord',
+            'Unusual buzzing sound during normal operation',
+          ],
+        },
+      ];
+
+      // Application State
+      const state = {
+        selectedDevice: 'Phone charger',
+        turns: [],
+        uploadedImage: null,
+        latestResult: null,
+        isLoading: false,
+        telemetryTimer: null,
+      };
+
+      // DOM Elements
+      const themePillBtns = document.querySelectorAll('.theme-pill-btn');
+      const deviceGrid = document.getElementById('deviceGrid');
+      const customDeviceWrapper = document.getElementById('customDeviceWrapper');
+      const customDeviceInput = document.getElementById('customDeviceInput');
+      const problemInput = document.getElementById('problemInput');
+      const charCount = document.getElementById('charCount');
+      const voiceDictateBtn = document.getElementById('voiceDictateBtn');
+      const voiceIdleIcon = document.getElementById('voiceIdleIcon');
+      const voiceWaveBars = document.getElementById('voiceWaveBars');
+      const voiceBtnLabel = document.getElementById('voiceBtnLabel');
+      const safetyAckCheckbox = document.getElementById('safetyAckCheckbox');
+      const safetyReadyBadge = document.getElementById('safetyReadyBadge');
+      const symptomChips = document.getElementById('symptomChips');
+      const dropZone = document.getElementById('dropZone');
+      const imageInput = document.getElementById('imageInput');
+      const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+      const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+      const imagePreview = document.getElementById('imagePreview');
+      const imageScanOverlay = document.getElementById('imageScanOverlay');
+      const imageFileName = document.getElementById('imageFileName');
+      const removeImageBtn = document.getElementById('removeImageBtn');
+      const diagnoseForm = document.getElementById('diagnoseForm');
+      const diagnoseBtn = document.getElementById('diagnoseBtn');
+      const diagnoseBtnIcon = document.getElementById('diagnoseBtnIcon');
+      const diagnoseBtnText = document.getElementById('diagnoseBtnText');
+      const formAlert = document.getElementById('formAlert');
+      const formAlertText = document.getElementById('formAlertText');
+      const closeFormAlert = document.getElementById('closeFormAlert');
+      const telemetryLoader = document.getElementById('telemetryLoader');
+      const telemetryStatusText = document.getElementById('telemetryStatusText');
+      const telemetryBar = document.getElementById('telemetryBar');
+      const resultsSection = document.getElementById('resultsSection');
+      const activeDevicePill = document.getElementById('activeDevicePill');
+      const copyReportBtn = document.getElementById('copyReportBtn');
+      const printReportBtn = document.getElementById('printReportBtn');
+      const chatMessages = document.getElementById('chatMessages');
+      const followupForm = document.getElementById('followupForm');
+      const followupInput = document.getElementById('followupInput');
+      const followupBtn = document.getElementById('followupBtn');
+      const followupBtnText = document.getElementById('followupBtnText');
+      const followupAlert = document.getElementById('followupAlert');
+      const resetBtn = document.getElementById('resetBtn');
+      const toastBanner = document.getElementById('toastBanner');
+      const toastText = document.getElementById('toastText');
+
+      // ---------------------------------------------------------------------
+      // Multi-Theme HUD Switcher (Theme 01 Lab, 02 Blue, 03 PCB, 04 Cyber-Amber HUD)
+      // ---------------------------------------------------------------------
+      function applyHudTheme(themeId) {
+        const html = document.documentElement;
+        html.setAttribute('data-hud-theme', themeId);
+        localStorage.setItem('fixmate-hud-theme', themeId);
+        if (themeId === 'theme-01') {
+          html.classList.remove('dark');
+        } else {
+          html.classList.add('dark');
+        }
+
+        themePillBtns.forEach((btn) => {
+          const isSelected = btn.getAttribute('data-theme-id') === themeId;
+          btn.className = isSelected
+            ? 'theme-pill-btn px-2.5 py-1.5 rounded-lg font-mono text-[11px] font-bold bg-amber-500 text-slate-950 shadow-sm transition cursor-pointer'
+            : 'theme-pill-btn px-2.5 py-1.5 rounded-lg font-mono text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 transition cursor-pointer';
+        });
+      }
+
+      applyHudTheme(localStorage.getItem('fixmate-hud-theme') || 'theme-04');
+
+      themePillBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const chosen = btn.getAttribute('data-theme-id');
+          applyHudTheme(chosen);
+          const names = {
+            'theme-01': 'Theme 01: Light Lab activated',
+            'theme-02': 'Theme 02: Midnight Bench activated',
+            'theme-03': 'Theme 03: Emerald PCB activated',
+            'theme-04': 'Theme 04: Cyber-Amber Diagnostic HUD activated',
+          };
+          showToast(names[chosen] || 'Theme updated');
+        });
+      });
+
+      // Safety Pre-Check Toggle Feedback
+      safetyAckCheckbox.addEventListener('change', () => {
+        if (safetyAckCheckbox.checked) {
+          safetyReadyBadge.textContent = '✓ PROTOCOL LOCKED';
+          safetyReadyBadge.className =
+            'self-start sm:self-center font-mono text-[10px] font-bold uppercase px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
+        } else {
+          safetyReadyBadge.textContent = '⚠ CONFIRM SAFETY';
+          safetyReadyBadge.className =
+            'self-start sm:self-center font-mono text-[10px] font-bold uppercase px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 animate-pulse';
+        }
+      });
+
+      // Voice-to-Symptom Dictation (Web Speech API)
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let isListening = false;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          isListening = true;
+          voiceIdleIcon.classList.add('hidden');
+          voiceWaveBars.classList.remove('hidden');
+          voiceWaveBars.classList.add('inline-flex');
+          voiceBtnLabel.textContent = 'Listening...';
+          voiceDictateBtn.classList.add('border-red-500', 'text-red-500');
+        };
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          const existing = problemInput.value.trim();
+          problemInput.value = existing ? `${existing} ${transcript}` : transcript;
+          charCount.textContent = `${problemInput.value.length} chars`;
+          showToast('Voice note added to fault description');
+        };
+
+        recognition.onerror = () => {
+          showToast('Microphone unavailable—please type your issue');
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          voiceIdleIcon.classList.remove('hidden');
+          voiceWaveBars.classList.add('hidden');
+          voiceWaveBars.classList.remove('inline-flex');
+          voiceBtnLabel.textContent = 'Dictate';
+          voiceDictateBtn.classList.remove('border-red-500', 'text-red-500');
+        };
+
+        voiceDictateBtn.addEventListener('click', () => {
+          if (isListening) {
+            recognition.stop();
+          } else {
+            recognition.start();
+          }
+        });
+      } else {
+        voiceDictateBtn.addEventListener('click', () => {
+          showToast('Voice dictation is not supported in this browser');
+        });
+      }
+
+      // ---------------------------------------------------------------------
+      // UI Feedback, Sanitization & Symptom Preset Helpers
+      // ---------------------------------------------------------------------
+      let toastTimeout = null;
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function showToast(message) {
+        if (!toastBanner || !toastText) return;
+        toastText.textContent = message;
+        toastBanner.classList.remove('hidden');
+        toastBanner.classList.add('flex');
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toastBanner.classList.add('hidden');
+          toastBanner.classList.remove('flex');
+        }, 3000);
+      }
+
+      function showFormError(msg) {
+        formAlertText.textContent = msg;
+        formAlert.classList.remove('hidden');
+        formAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function hideFormError() {
+        formAlert.classList.add('hidden');
+        formAlertText.textContent = '';
+      }
+
+      function showFollowupError(msg) {
+        followupAlert.textContent = `⚠️ ${msg}`;
+        followupAlert.classList.remove('hidden');
+      }
+
+      function hideFollowupError() {
+        followupAlert.classList.add('hidden');
+        followupAlert.textContent = '';
+      }
+
+      function renderSymptomPresets() {
+        const current =
+          DEVICE_CATALOG.find((item) => item.id === state.selectedDevice) || DEVICE_CATALOG[0];
+        symptomChips.innerHTML = current.presets
+          .map(
+            (preset) => `
+            <button
+              type="button"
+              data-preset="${escapeHtml(preset)}"
+              class="preset-chip-btn text-left text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-100/80 dark:bg-slate-800/70 hover:border-amber-500 dark:hover:border-cyan-400 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+            >
+              + ${escapeHtml(preset)}
+            </button>
+          `
+          )
+          .join('');
+
+        symptomChips.querySelectorAll('.preset-chip-btn').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            problemInput.value = chip.getAttribute('data-preset');
+            charCount.textContent = `${problemInput.value.length} chars`;
+            problemInput.focus();
+          });
+        });
+      }
+
+      function renderDeviceSelector() {
+        deviceGrid.innerHTML = DEVICE_CATALOG.map((item) => {
+          const active = state.selectedDevice === item.id;
+          const activeClasses = active
+            ? 'border-amber-500 dark:border-amber-400 bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 ring-2 ring-amber-500/30 shadow-md'
+            : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200';
+
+          return `
+            <button
+              type="button"
+              data-device="${escapeHtml(item.id)}"
+              class="device-card-btn flex flex-col items-center justify-center gap-2 rounded-xl border p-3.5 transition-all duration-200 cursor-pointer ${activeClasses}"
+            >
+              <div class="${active ? 'scale-110 text-amber-600 dark:text-amber-400' : ''} transition-transform duration-200 pointer-events-none">
+                ${item.svg}
+              </div>
+              <span class="text-xs font-semibold tracking-tight pointer-events-none">${escapeHtml(item.label)}</span>
+            </button>
+          `;
+        }).join('');
+
+        // Attach click & 3D spotlight tilt listeners
+        deviceGrid.querySelectorAll('.device-card-btn').forEach((btn) => {
+          btn.addEventListener('mousemove', (e) => {
+            const rect = btn.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const rotateY = ((x / rect.width) - 0.5) * 14;
+            const rotateX = (0.5 - (y / rect.height)) * 14;
+            btn.style.setProperty('--mouse-x', `${x}px`);
+            btn.style.setProperty('--mouse-y', `${y}px`);
+            btn.style.transform = `perspective(600px) rotateX(${rotateX.toFixed(1)}deg) rotateY(${rotateY.toFixed(1)}deg) scale(1.03)`;
+          });
+
+          btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)';
+          });
+
+          btn.addEventListener('click', () => {
+            state.selectedDevice = btn.getAttribute('data-device');
+            renderDeviceSelector();
+            renderSymptomPresets();
+            if (state.selectedDevice === 'Other') {
+              customDeviceWrapper.classList.remove('hidden');
+            } else {
+              customDeviceWrapper.classList.add('hidden');
+            }
+          });
+        });
+      }
+
+      renderDeviceSelector();
+      renderSymptomPresets();
+
+      problemInput.addEventListener('input', () => {
+        charCount.textContent = `${problemInput.value.length} chars`;
+      });
+
+      closeFormAlert.addEventListener('click', hideFormError);
+
+      // ---------------------------------------------------------------------
+      // Drag-and-Drop & Client-Side Image Compression
+      // ---------------------------------------------------------------------
+      function compressImageFile(file) {
+        return new Promise((resolve, reject) => {
+          const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
+          if (!validTypes.includes(file.type)) {
+            reject(new Error('Please upload a valid PNG, JPG, or WEBP image.'));
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Failed to read the selected image file.'));
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('The selected file is not a valid image.'));
+            img.onload = () => {
+              const MAX_DIM = 1024;
+              let { width, height } = img;
+              if (width > MAX_DIM || height > MAX_DIM) {
+                if (width > height) {
+                  height = Math.round((height * MAX_DIM) / width);
+                  width = MAX_DIM;
+                } else {
+                  width = Math.round((width * MAX_DIM) / height);
+                  height = MAX_DIM;
+                }
+              }
+
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+
+              const outputMime = 'image/jpeg';
+              const dataUrl = canvas.toDataURL(outputMime, 0.82);
+              const base64 = dataUrl.split(',')[1];
+              resolve({
+                base64,
+                mime: outputMime,
+                previewUrl: dataUrl,
+                name: file.name,
+              });
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function handleImageSelected(file) {
+        if (!file) return;
+        hideFormError();
+        try {
+          const processed = await compressImageFile(file);
+          state.uploadedImage = processed;
+          imagePreview.src = processed.previewUrl;
+          imageFileName.textContent = processed.name;
+          uploadPlaceholder.classList.add('hidden');
+          imagePreviewContainer.classList.remove('hidden');
+          showToast('Photo attached & optimized for inspection');
+        } catch (err) {
+          imageInput.value = '';
+          showFormError(err.message);
+        }
+      }
+
+      imageInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        handleImageSelected(file);
+      });
+
+      // Drag and drop events
+      ['dragenter', 'dragover'].forEach((evtName) => {
+        dropZone.addEventListener(evtName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('border-blue-500', 'dark:border-cyan-400', 'bg-blue-500/5');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach((evtName) => {
+        dropZone.addEventListener(evtName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('border-blue-500', 'dark:border-cyan-400', 'bg-blue-500/5');
+        });
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        handleImageSelected(file);
+      });
+
+      removeImageBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        state.uploadedImage = null;
+        imageInput.value = '';
+        imagePreview.src = '';
+        imagePreviewContainer.classList.add('hidden');
+        uploadPlaceholder.classList.remove('hidden');
+      });
+
+      // ---------------------------------------------------------------------
+      // Telemetry Loader Controls
+      // ---------------------------------------------------------------------
+      function startTelemetryAnimation() {
+        const stages = [
+          'Checking high-voltage & battery safety rules...',
+          'Cross-referencing fault symptoms & visual cues...',
+          'Ranking probable root causes by likelihood...',
+          'Generating beginner-safe troubleshooting steps...',
+        ];
+        let step = 0;
+        telemetryStatusText.textContent = stages[0];
+        telemetryLoader.classList.remove('hidden');
+        if (state.uploadedImage) {
+          imageScanOverlay.classList.remove('hidden');
+        }
+
+        // Restart bar animation cleanly
+        telemetryBar.classList.remove('animate-telemetry-bar');
+        void telemetryBar.offsetWidth;
+        telemetryBar.classList.add('animate-telemetry-bar');
+
+        state.telemetryTimer = setInterval(() => {
+          step = (step + 1) % stages.length;
+          telemetryStatusText.textContent = stages[step];
+        }, 1450);
+      }
+
+      function stopTelemetryAnimation() {
+        clearInterval(state.telemetryTimer);
+        telemetryLoader.classList.add('hidden');
+        imageScanOverlay.classList.add('hidden');
+      }
+
+      // ---------------------------------------------------------------------
+      // Conversation Rendering (User Bubbles + Interactive Diagnostic Cards)
+      // ---------------------------------------------------------------------
+      function appendUserMessage(titleText, bodyText, previewUrl = null) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex justify-end animate-reveal';
+
+        const imageHtml = previewUrl
+          ? `<img src="${previewUrl}" alt="Device attachment" class="mt-3 max-h-48 rounded-xl border border-white/25 object-contain shadow-md" />`
+          : '';
+
+        wrapper.innerHTML = `
+          <div class="max-w-2xl rounded-2xl rounded-tr-sm bg-gradient-to-br from-blue-600 to-indigo-600 text-white px-5 py-4 shadow-md">
+            ${
+              titleText
+                ? `<div class="font-mono text-[11px] font-bold uppercase tracking-wider text-cyan-200 mb-1">${escapeHtml(titleText)}</div>`
+                : ''
+            }
+            <p class="text-sm whitespace-pre-wrap leading-relaxed">${escapeHtml(bodyText)}</p>
+            ${imageHtml}
+          </div>
+        `;
+        chatMessages.appendChild(wrapper);
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function appendDiagnosticCard(data) {
+        state.latestResult = data;
+        const cardId = `diag-card-${Date.now()}`;
+        const wrapper = document.createElement('div');
+        wrapper.id = cardId;
+        wrapper.className =
+          'rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl p-5 sm:p-7 shadow-xl space-y-6 animate-reveal';
+
+        // 1. Safety Warning
+        const safetyText = escapeHtml(
+          data.safety_warning ||
+            'Always unplug the device first. Never open power supplies, microwaves, or swollen batteries.'
+        );
+
+        // 2. Ranked Likely Causes with Visual Likelihood Bars
+        const causes = Array.isArray(data.likely_causes) ? data.likely_causes : [];
+        const likelihoodWidths = ['88%', '58%', '34%'];
+        const causesHtml = causes.length
+          ? `
+            <div class="animate-reveal delay-1">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span class="text-amber-500 dark:text-cyan-400">🔎</span> Likely Causes (Ranked)
+                </h3>
+                <span class="font-mono text-[11px] text-slate-400">PROBABILITY ORDER</span>
+              </div>
+              <div class="space-y-3">
+                ${causes
+                  .map((item, idx) => {
+                    const rank = item.rank || idx + 1;
+                    const rankLabel = rank === 1 ? 'PRIMARY SUSPECT' : `RANK #0${rank}`;
+                    const targetWidth = likelihoodWidths[idx] || '30%';
+                    const causeTitle = escapeHtml(item.cause || `Possible Cause #${rank}`);
+                    const explanation = escapeHtml(item.explanation || '');
+                    return `
+                      <div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/45 p-4 transition hover:border-amber-400/60 dark:hover:border-cyan-500/40">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                          <div class="flex items-center gap-2">
+                            <span class="font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-md ${
+                              rank === 1
+                                ? 'bg-amber-500 text-slate-950'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                            }">${rankLabel}</span>
+                            <span class="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">${causeTitle}</span>
+                          </div>
+                          <span class="font-mono text-[11px] font-semibold text-slate-400">${targetWidth}</span>
+                        </div>
+                        <div class="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700/80 overflow-hidden my-2">
+                          <div
+                            data-target-width="${targetWidth}"
+                            style="width: 0%"
+                            class="cause-prob-bar h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-400 to-cyan-400 transition-all duration-1000 ease-out"
+                          ></div>
+                        </div>
+                        ${
+                          explanation
+                            ? `<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">${explanation}</p>`
+                            : ''
+                        }
+                      </div>
+                    `;
+                  })
+                  .join('')}
+              </div>
+            </div>
+          `
+          : '';
+
+        // 3. Tools Needed
+        const tools = Array.isArray(data.tools_needed) ? data.tools_needed : [];
+        const toolsHtml = tools.length
+          ? `
+            <div class="animate-reveal delay-2">
+              <h3 class="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2.5">
+                <span class="text-blue-600 dark:text-cyan-400">🧰</span> Workbench Tools Needed
+              </h3>
+              <div class="flex flex-wrap gap-2">
+                ${tools
+                  .map(
+                    (tool) => `
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs">
+                      <span class="text-blue-600 dark:text-cyan-400">🔧</span> ${escapeHtml(tool)}
+                    </span>
+                  `
+                  )
+                  .join('')}
+              </div>
+            </div>
+          `
+          : '';
+
+        // 4. Interactive Step-by-Step Checklist
+        const steps = Array.isArray(data.step_by_step_checks) ? data.step_by_step_checks : [];
+        const stepsHtml = steps.length
+          ? `
+            <div class="animate-reveal delay-3">
+              <div class="flex items-center justify-between mb-2.5">
+                <h3 class="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span class="text-blue-600 dark:text-cyan-400">📋</span> Step-by-Step Checks
+                </h3>
+                <span class="step-progress-label font-mono text-xs font-semibold text-blue-600 dark:text-cyan-400">
+                  0 / ${steps.length} COMPLETED
+                </span>
+              </div>
+              <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/35 divide-y divide-slate-200/70 dark:divide-slate-800 overflow-hidden">
+                ${steps
+                  .map(
+                    (step, idx) => `
+                    <label class="step-check-row flex items-start gap-3.5 p-3.5 sm:p-4 cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition select-none">
+                      <input
+                        type="checkbox"
+                        class="step-checkbox mt-1 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div class="flex-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                          <span class="font-mono text-[11px] font-bold text-slate-400">STEP 0${idx + 1}</span>
+                          ${
+                            idx === 0
+                              ? '<span class="font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">Mandatory First Step</span>'
+                              : ''
+                          }
+                        </div>
+                        <span class="step-text text-sm text-slate-800 dark:text-slate-200 leading-relaxed transition-all">
+                          ${escapeHtml(step)}
+                        </span>
+                      </div>
+                    </label>
+                  `
+                  )
+                  .join('')}
+              </div>
+            </div>
+          `
+          : '';
+
+        // 5. Clarifying Questions with One-Click Quick Reply Pills
+        const questions = (Array.isArray(data.clarifying_questions) ? data.clarifying_questions : [])
+          .map((q) => String(q).trim())
+          .filter(Boolean)
+          .slice(0, 2);
+
+        const questionsHtml = questions.length
+          ? `
+            <div class="rounded-xl border border-indigo-400/40 bg-indigo-500/10 p-4 sm:p-5 animate-reveal delay-3">
+              <h3 class="font-display text-sm font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2 mb-2">
+                <span>💬</span> Quick Follow-Up Questions
+              </h3>
+              <ul class="space-y-2 text-sm text-indigo-950 dark:text-indigo-100">
+                ${questions
+                  .map(
+                    (q, idx) => `
+                    <li class="flex items-start justify-between gap-3">
+                      <span><strong>Q${idx + 1}:</strong> ${escapeHtml(q)}</span>
+                      <button
+                        type="button"
+                        data-question="${escapeHtml(q)}"
+                        class="quick-answer-btn shrink-0 font-mono text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-indigo-600/15 hover:bg-indigo-600 text-indigo-700 dark:text-indigo-200 hover:text-white transition cursor-pointer"
+                      >
+                        Answer ↵
+                      </button>
+                    </li>
+                  `
+                  )
+                  .join('')}
+              </ul>
+            </div>
+          `
+          : '';
+
+        // 6. Colored Verdict Showcase Banner
+        const verdictClean = (data.verdict || 'Try with caution').trim();
+        const verdictLower = verdictClean.toLowerCase();
+        let verdictTheme = {
+          border: 'border-amber-500/40',
+          bg: 'bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent',
+          badge: 'bg-amber-500 text-slate-950 shadow-amber-500/30',
+          icon: '⚠️',
+          defaultCat: 'Fix at home',
+        };
+
+        if (verdictLower.includes('safe')) {
+          verdictTheme = {
+            border: 'border-emerald-500/40',
+            bg: 'bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-transparent',
+            badge: 'bg-emerald-500 text-slate-950 shadow-emerald-500/30',
+            icon: '✅',
+            defaultCat: 'Fix at home',
+          };
+        } else if (verdictLower.includes('technician') || verdictLower.includes('call')) {
+          verdictTheme = {
+            border: 'border-red-500/45',
+            bg: 'bg-gradient-to-r from-red-500/15 via-rose-500/10 to-transparent',
+            badge: 'bg-red-600 text-white shadow-red-600/30',
+            icon: '🚨',
+            defaultCat: 'Call a technician',
+          };
+        }
+
+        const categoryClean = escapeHtml((data.verdict_category || verdictTheme.defaultCat).trim());
+        const reasonClean = escapeHtml(
+          (data.verdict_reason || 'Follow the safety steps above before proceeding.').trim()
+        );
+
+        wrapper.innerHTML = `
+          <!-- Prominent Safety Warning Banner -->
+          <div class="rounded-xl border-l-4 border-red-600 bg-red-500/10 p-4">
+            <div class="font-display text-sm font-bold text-red-700 dark:text-red-400 flex items-center gap-2 mb-1">
+              <span>⚠️</span> Critical Safety Warning
+            </div>
+            <p class="text-xs sm:text-sm text-red-950 dark:text-red-100 leading-relaxed">${safetyText}</p>
+          </div>
+
+          ${causesHtml}
+          ${toolsHtml}
+          ${stepsHtml}
+          ${questionsHtml}
+
+          <!-- Verdict Showcase -->
+          <div class="rounded-2xl border ${verdictTheme.border} ${verdictTheme.bg} p-5 animate-reveal delay-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-display text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <span>🏁</span> Final Repair Verdict
+              </span>
+              <span class="font-mono text-xs font-semibold px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                📌 ${categoryClean}
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 mb-2.5">
+              <span class="badge-breathe inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm sm:text-base font-display font-bold shadow-lg ${verdictTheme.badge}">
+                <span>${verdictTheme.icon}</span>
+                <span>${escapeHtml(verdictClean)}</span>
+              </span>
+            </div>
+
+            <p class="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
+              <strong>Why:</strong> ${reasonClean}
+            </p>
+          </div>
+        `;
+
+        chatMessages.appendChild(wrapper);
+
+        // Animate Probability Bars from 0% to target width
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            wrapper.querySelectorAll('.cause-prob-bar').forEach((bar) => {
+              bar.style.width = bar.getAttribute('data-target-width') || '50%';
+            });
+          }, 120);
+        });
+
+        // Bind Interactive Step Checkboxes
+        const checkboxes = wrapper.querySelectorAll('.step-checkbox');
+        const progressLabel = wrapper.querySelector('.step-progress-label');
+        checkboxes.forEach((cb) => {
+          cb.addEventListener('change', () => {
+            const textEl = cb.closest('.step-check-row').querySelector('.step-text');
+            if (cb.checked) {
+              textEl.classList.add('line-through', 'opacity-50');
+            } else {
+              textEl.classList.remove('line-through', 'opacity-50');
+            }
+            const checkedCount = wrapper.querySelectorAll('.step-checkbox:checked').length;
+            if (progressLabel) {
+              if (checkedCount === checkboxes.length && checkboxes.length > 0) {
+                progressLabel.textContent = `✓ ALL ${checkboxes.length} CHECKS COMPLETE`;
+                progressLabel.classList.add('text-emerald-500');
+                showToast('All troubleshooting checks completed safely!');
+              } else {
+                progressLabel.textContent = `${checkedCount} / ${checkboxes.length} COMPLETED`;
+                progressLabel.classList.remove('text-emerald-500');
+              }
+            }
+          });
+        });
+
+        // Bind Quick-Answer Buttons on Clarifying Questions
+        wrapper.querySelectorAll('.quick-answer-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const qText = btn.getAttribute('data-question');
+            followupInput.value = `Regarding "${qText}": `;
+            followupInput.focus();
+            followupInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        });
+
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // ---------------------------------------------------------------------
+      // Copy Diagnostic Report to Clipboard (iFrame-safe execCommand)
+      // ---------------------------------------------------------------------
+      copyReportBtn.addEventListener('click', () => {
+        if (!state.latestResult) return;
+        const r = state.latestResult;
+        const lines = [
+          `FIXMATE DIAGNOSTIC REPORT (${activeDevicePill.textContent})`,
+          `Verdict: ${r.verdict} (${r.verdict_category}) - ${r.verdict_reason}`,
+          ``,
+          `SAFETY WARNING: ${r.safety_warning}`,
+          ``,
+          `LIKELY CAUSES:`,
+          ...(r.likely_causes || []).map((c, i) => `${i + 1}. ${c.cause}: ${c.explanation}`),
+          ``,
+          `TOOLS NEEDED: ${(r.tools_needed || []).join(', ')}`,
+          ``,
+          `STEP-BY-STEP CHECKS:`,
+          ...(r.step_by_step_checks || []).map((s, i) => `${i + 1}. ${s}`),
+        ];
+
+        const tempArea = document.createElement('textarea');
+        tempArea.value = lines.join('\n');
+        tempArea.style.position = 'fixed';
+        tempArea.style.opacity = '0';
+        document.body.appendChild(tempArea);
+        tempArea.select();
+        try {
+          document.execCommand('copy');
+          showToast('Diagnostic checklist copied to clipboard!');
+        } catch {
+          showToast('Unable to copy report.');
+        }
+        document.body.removeChild(tempArea);
+      });
+
+      // Print / PDF Repair Checklist
+      printReportBtn.addEventListener('click', () => {
+        window.print();
+      });
+
+      // ---------------------------------------------------------------------
+      // Serverless API Request (/api/diagnose)
+      // ---------------------------------------------------------------------
+      async function requestDiagnosis(turnsPayload) {
+        const response = await fetch('/api/diagnose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ turns: turnsPayload }),
+        });
+
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(`Server returned an unexpected response (HTTP ${response.status}).`);
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || `Request failed with status ${response.status}.`);
+        }
+
+        if (!data.result) {
+          throw new Error('No diagnostic report received from the server.');
+        }
+
+        return data.result;
+      }
+
+      // ---------------------------------------------------------------------
+      // Handle Initial Diagnosis Form Submit
+      // ---------------------------------------------------------------------
+      diagnoseForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (state.isLoading) return;
+        hideFormError();
+        hideFollowupError();
+
+        if (!safetyAckCheckbox.checked) {
+          showFormError('Please confirm the Safety Ready checkbox above before running a diagnosis.');
+          safetyAckCheckbox.focus();
+          return;
+        }
+
+        const rawProblem = problemInput.value.trim();
+        if (!rawProblem) {
+          showFormError('Please describe the problem in the fault description box first.');
+          problemInput.focus();
+          return;
+        }
+
+        const customName = customDeviceInput.value.trim();
+        const deviceLabel =
+          state.selectedDevice === 'Other' && customName
+            ? `Other (${customName})`
+            : state.selectedDevice;
+
+        const promptText =
+          `Device Type: ${deviceLabel}\n` +
+          `Problem Description: ${rawProblem}\n` +
+          `Photo Attached: ${state.uploadedImage ? 'Yes' : 'No'}\n\n` +
+          `Please diagnose this issue following all FixMate safety rules and return the structured JSON response.`;
+
+        const firstTurn = {
+          role: 'user',
+          text: promptText,
+        };
+
+        if (state.uploadedImage) {
+          firstTurn.image_base64 = state.uploadedImage.base64;
+          firstTurn.image_mime = state.uploadedImage.mime;
+        }
+
+        state.isLoading = true;
+        diagnoseBtn.disabled = true;
+        diagnoseBtnText.textContent = 'Running Safety & Fault Scan...';
+        startTelemetryAnimation();
+
+        try {
+          const result = await requestDiagnosis([firstTurn]);
+
+          state.turns = [
+            firstTurn,
+            { role: 'model', text: JSON.stringify(result) },
+          ];
+
+          chatMessages.innerHTML = '';
+          activeDevicePill.textContent = deviceLabel.toUpperCase();
+          resultsSection.classList.remove('hidden');
+
+          appendUserMessage(
+            `TARGET DEVICE: ${deviceLabel}`,
+            rawProblem,
+            state.uploadedImage ? state.uploadedImage.previewUrl : null
+          );
+          appendDiagnosticCard(result);
+        } catch (err) {
+          showFormError(err.message);
+        } finally {
+          state.isLoading = false;
+          diagnoseBtn.disabled = false;
+          diagnoseBtnText.textContent = 'Run Safety Diagnosis';
+          stopTelemetryAnimation();
+        }
+      });
+
+      // ---------------------------------------------------------------------
+      // Handle Follow-Up Chat Submission
+      // ---------------------------------------------------------------------
+      followupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (state.isLoading) return;
+        hideFollowupError();
+
+        const replyText = followupInput.value.trim();
+        if (!replyText) {
+          showFollowupError('Please enter your reply before sending.');
+          followupInput.focus();
+          return;
+        }
+
+        const followupPrompt =
+          `User follow-up answer / update: ${replyText}\n\n` +
+          `Update the diagnosis, clarifying questions (if any remain), safety warning, ` +
+          `steps, and verdict based on this new information. Return valid JSON.`;
+
+        const nextUserTurn = { role: 'user', text: followupPrompt };
+        const candidateTurns = [...state.turns, nextUserTurn];
+
+        state.isLoading = true;
+        followupBtn.disabled = true;
+        followupBtnText.textContent = 'Updating...';
+        followupInput.disabled = true;
+        startTelemetryAnimation();
+
+        appendUserMessage(null, replyText, null);
+        followupInput.value = '';
+
+        try {
+          const updatedResult = await requestDiagnosis(candidateTurns);
+          state.turns = [
+            ...candidateTurns,
+            { role: 'model', text: JSON.stringify(updatedResult) },
+          ];
+          appendDiagnosticCard(updatedResult);
+        } catch (err) {
+          showFollowupError(err.message);
+        } finally {
+          state.isLoading = false;
+          followupBtn.disabled = false;
+          followupBtnText.textContent = 'Send Reply';
+          followupInput.disabled = false;
+          stopTelemetryAnimation();
+          followupInput.focus();
+        }
+      });
+
+      // ---------------------------------------------------------------------
+      // Reset Workbench Session
+      // ---------------------------------------------------------------------
+      resetBtn.addEventListener('click', () => {
+        state.turns = [];
+        state.uploadedImage = null;
+        state.latestResult = null;
+        state.selectedDevice = 'Phone charger';
+        diagnoseForm.reset();
+        charCount.textContent = '0 chars';
+        renderDeviceSelector();
+        renderSymptomPresets();
+        customDeviceWrapper.classList.add('hidden');
+        imagePreview.src = '';
+        imagePreviewContainer.classList.add('hidden');
+        uploadPlaceholder.classList.remove('hidden');
+        chatMessages.innerHTML = '';
+        resultsSection.classList.add('hidden');
+        hideFormError();
+        hideFollowupError();
+        stopTelemetryAnimation();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('Workbench reset for a new diagnosis');
+      });
+    })();
+  </script>
+</body>
+</html>
